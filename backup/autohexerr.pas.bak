@@ -1,0 +1,125 @@
+unit AutoHexerr;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
+  ExtDlgs, Menus;
+
+type
+
+  { TForm1 }
+
+  TForm1 = class(TForm)
+    BrowseButton: TButton;
+    HexButton: TButton;
+    Label1: TLabel;
+    Debugger: TLabel;
+    NewVersionString: TEdit;
+    OpenDialog1: TOpenDialog;
+    SelectDirectory: TSelectDirectoryDialog;
+    TextG: TLabel;
+    OldVersionString: TEdit;
+    SWFLocationString: TEdit;
+    SwfLocationTitle: TLabel;
+    Title: TLabel;
+    procedure BrowseButtonClick(Sender: TObject);
+    procedure HexButtonClick(Sender: TObject);
+  private
+    { private declarations }
+  public
+    { public declarations }
+  end;
+
+var
+  Form1: TForm1;
+  filename:string;
+  DirectoryName:String;
+  BatFile:TextFile;
+  ParamFile:Textfile;
+  TempFile:TextFile;
+  Reassemble:TextFile;
+  FileNameV2:string;
+
+implementation
+
+{$R *.lfm}
+
+{ TForm1 }
+
+procedure TForm1.BrowseButtonClick(Sender: TObject);
+var
+ x:integer;
+ Check:integer;
+begin
+     check:=0;
+     if OpenDialog1.Execute=true then
+     begin
+          DirectoryName:=OpenDialog1.FileName;
+          Filename:=ExtractFileName(DirectoryName);
+          FileNameV2:=ExtractFileNameOnly(DirectoryName);
+     end;
+
+    // x:=Length(Filename);
+
+     //If filename[x]='f' then Check:=Check+1;
+     //if filename[x-1]='w' then Check:=Check+1;
+     //if filename[x-2]='s' then Check:=Check+1;
+
+     SWFLocationString.Caption:=DirectoryName;
+end;
+
+procedure FindAndReplace(SearchFor, ReplaceWith, FileName: string);
+var
+  FileContents: TStringList;
+begin
+  FileContents:=TStringList.Create;
+  try
+    FileContents.LoadFromFile(FileName);
+    FileContents.Text:=StringReplace(FileContents.Text, SearchFor, ReplaceWith, [rfReplaceAll,rfIgnoreCase]);
+    FileContents.SaveToFile(FileName);
+  finally
+    FileContents.Free;
+  end;
+end;
+
+
+
+
+procedure TForm1.HexButtonClick(Sender: TObject);
+var
+ NewDirectory:string;
+ ParamDirectory:String;
+ TempString:string;
+ TextString:string;
+begin
+     AssignFile(BatFile,'Hex.bat');
+     NewDirectory:=GetCurrentDir+'\'+Filename;
+     Begin RenameFile(DirectoryName,NewDirectory) end;
+     Rewrite(BatFile); //Opening with permissions
+     Writeln(BatFile,'SWFDecompress ',Filename);
+     writeln(BatFile,'abcexport ',Filename);
+     writeln(BatFile,'rabcdasm ',FileNameV2+'-1.abc');
+     CloseFile(batFile);
+     SysUtils.ExecuteProcess(UTF8ToSys('Hex.Bat'), '', []);
+     ParamDirectory:=GetCurrentDir+'\'+FileNameV2+'-1\com\company\assembleegameclient\parameters';
+
+     FindAndReplace('"'+OldVersionString.Caption+'"', '"'+NewVersionString.Caption+'"',ParamDirectory+'\Parameters.class.asasm');
+
+
+     Assignfile(Reassemble,'Hex2.bat');
+     rewrite(Reassemble);
+     writeln(Reassemble,'rabcasm '+filenameV2+'-1\'+FileNameV2+'-1.main.asasm');
+     writeln(Reassemble,'abcreplace '+filenameV2+'.swf 1 '+FileNameV2+'-1\'+FileNameV2+'-1.main.abc');
+     closefile(Reassemble);
+     SysUtils.ExecuteProcess(UTF8ToSys('Hex2.Bat'), '', []);
+     RenameFile(NewDirectory,DirectoryName);
+     ShowMessage('Hex Completed, Enjoy!');
+
+ //    Erase(TempFile);
+ //    Erase(BatFile); //Goes @ end
+end;
+end.
+
